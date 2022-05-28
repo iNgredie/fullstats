@@ -1,17 +1,27 @@
 from typing import List
 
+from fastapi import Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 
-from app.crud.base import CRUDBase
-from app.models.item import Item
-from app.schemas.item import ItemCreate, ItemUpdate
+from .. import models
+from .. import schemas
+from app.db.session import get_db
 
 
-class CRUDItem(CRUDBase[Item, ItemCreate, ItemUpdate]):
+class CRUDNews:
+
+    def __init__(
+        self,
+        model: models.News(),
+        session: Session = Depends(get_db),
+    ):
+        self.model = model
+        self.session = session
+
     def create_with_owner(
-        self, db: Session, *, obj_in: ItemCreate, owner_id: int
-    ) -> Item:
+        self, db: Session, *, obj_in: schemas.NewsCreate, owner_id: int
+    ) -> models.News:
         obj_in_data = jsonable_encoder(obj_in)
         db_obj = self.model(**obj_in_data, owner_id=owner_id)
         db.add(db_obj)
@@ -20,15 +30,13 @@ class CRUDItem(CRUDBase[Item, ItemCreate, ItemUpdate]):
         return db_obj
 
     def get_multi_by_owner(
-        self, db: Session, *, owner_id: int, skip: int = 0, limit: int = 100
-    ) -> List[Item]:
+        self, db: Session, *, author_id: int, skip: int = 0, limit: int = 100
+    ) -> List[models.News]:
         return (
             db.query(self.model)
-            .filter(Item.owner_id == owner_id)
+            .filter(models.News.owner_id == author_id)
             .offset(skip)
             .limit(limit)
             .all()
         )
 
-
-item = CRUDItem(Item)
